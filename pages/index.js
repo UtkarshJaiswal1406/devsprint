@@ -1,8 +1,9 @@
 import { HeroHighlight, Highlight } from "@/components/ui/hero-highlight";
 import NavbarComponent from "@/components/navbar";
 import BentoGridDemo from "@/components/bento-grid-demo";
+import prisma from "@/lib/prisma";
 
-export default function Home() {
+export default function Home({ posts }) {
   return (
     <div className="bg-black">
     <div className="relative">
@@ -22,8 +23,40 @@ export default function Home() {
     
     {/* Bento Grid Section */}
     <div className="py-20 px-4">
-      <BentoGridDemo />
+      <BentoGridDemo posts={posts} />
     </div>
     </div>
   );
+}
+
+export async function getStaticProps() {
+  const posts = await prisma.post.findMany({
+    where: { published: true },
+    orderBy: [
+      { publishedAt: "desc" },
+      { createdAt: "desc" },
+    ],
+    take: 7,
+    select: {
+      slug: true,
+      title: true,
+      excerpt: true,
+      featuredImage: true,
+      publishedAt: true,
+    },
+  });
+
+  const serializedPosts = posts.map((post) => ({
+    ...post,
+    excerpt: post.excerpt ?? null,
+    featuredImage: post.featuredImage ?? null,
+    publishedAt: post.publishedAt ? post.publishedAt.toISOString() : null,
+  }));
+
+  return {
+    props: {
+      posts: serializedPosts,
+    },
+    revalidate: 60,
+  };
 }
